@@ -1,132 +1,75 @@
 import * as THREE from 'three'
-// 导入 轨道控制器
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 
-import gsap from 'gsap'
+// GOAl: 环境遮挡贴图与强度 环境遮挡(Ambient Occlusion)
 
-// GOAL：dat.gui 轻量级UI界面控制库
+// 场景
+let scene = new THREE.Scene()
 
-import * as dat from 'dat.gui'
+// 相机
+// 通过将参数抽离的方式，避免被格式化
+let arr = [45, window.innerWidth / window.innerHeight, 1, 100000]
+let camera = new THREE.PerspectiveCamera(...arr)
+camera.position.set(0, 0, 6)
+camera.lookAt(scene.position)
 
-// 1. 创建场景
-const scene = new THREE.Scene()
+// assets
+const colorImg = require('../assets/textures/door/color.jpg')
+const alphaImg = require('../assets/textures/door/alpha.jpg')
+const aoImg = require('../assets/textures/door/ambientOcclusion.jpg')
 
-// 2. 创建相机
-const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
-)
-// x y z
-camera.position.set(0, 0, 10)
-scene.add(camera)
+// 导入纹理
+let textureLoader = new THREE.TextureLoader()
+let doorColorTexture = textureLoader.load(colorImg)
+// 透明纹理的使用
+let doorAlphaTexture = textureLoader.load(alphaImg)
+// Load Ao
+let dooAoTexture = textureLoader.load(aoImg)
 
 // 添加物体
-// 创建几何体
-const cubeGeometry = new THREE.BoxGeometry(1, 1, 1)
-// 材质
-const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 })
-
-// 根据几何体和材质创建物体
-const cube = new THREE.Mesh(cubeGeometry, cubeMaterial)
-console.log(cube)
-
-// 修改物体的位置
-// cube.position.set(5, 0, 0)
-// cube.position.y = 2
-
-//缩放
-// cube.scale.set(3, 2, 1)
-// cube.scale.x = 5
-
-//旋转
-// cube.rotation.set(Math.PI / 4, 0, 0)
-
-// 将几何体添加到场景中
+let cubeGeometry = new THREE.BoxGeometry(1, 1, 1)
+cubeGeometry.setAttribute(
+  'uv2',
+  new THREE.BufferAttribute(cubeGeometry.attributes.uv.array, 2)
+)
+let material = new THREE.MeshBasicMaterial({
+  color: '#ffff00',
+  map: doorColorTexture,
+  alphaMap: doorAlphaTexture,
+  aoMap: dooAoTexture,
+  transparent: true,
+  // side: THREE.DoubleSide, // 双面渲染
+})
+let cube = new THREE.Mesh(cubeGeometry, material)
 scene.add(cube)
 
-// 添加gui
-const gui = new dat.GUI()
-gui
-  .add(cube.position, 'x')
-  .min(0)
-  .max(5)
-  .step(0.01)
-  .name('X轴')
-  .onChange((v) => {
-    console.log('值被修改', v)
-  })
-  .onFinishChange((v) => {
-    console.log('onFinishChange完全停下来', v)
-  })
-// 修改物体颜色
-const params = {
-  color: '#ffff00',
-  fn: () => {
-    // 让立方体运动起来
-    gsap.to(cube.position, { x: 5, duration: 3, repeat: -1 })
-  },
-}
-gui.addColor(params, 'color').onChange((v) => {
-  console.log('值被修改', v)
-  cube.material.color.set(v)
-})
-// 设置选项框
-gui.add(cube, 'visible').name('是否显示')
-// 设置按钮点击触发某个事件
-gui.add(params, 'fn').name('立方体运动')
-// 添加文件夹
-var folder = gui.addFolder('设置立方体')
-folder.add(cube.material, 'wireframe')
+//添加平面
+const planeGeometry = new THREE.PlaneGeometry(1, 1)
+// Ao 需要设置第二个uv
+planeGeometry.setAttribute(
+  'uv2',
+  new THREE.BufferAttribute(planeGeometry.attributes.uv.array, 2)
+)
+const plane = new THREE.Mesh(planeGeometry, material)
+plane.position.set(1.5, 0, 0)
+scene.add(plane)
 
-// 初始化渲染器
-const renderer = new THREE.WebGLRenderer()
-
-// 设置渲染的尺寸大小
+// 渲染器
+let renderer = new THREE.WebGLRenderer()
 renderer.setSize(window.innerWidth, window.innerHeight)
-
-// console.log(renderer)
-
-// 将webgl渲染的canvas内容添加到body上
 document.body.appendChild(renderer.domElement)
 
-// // 使用渲染器，通过相机将场景渲染进来
-// renderer.render(scene, camera)
+// 控制器
+let controls = new OrbitControls(camera, renderer.domElement)
 
-const controls = new OrbitControls(camera, renderer.domElement)
-// 设置控制器阻尼，让控制器更有真实效果。请注意，如果该值被启用，你将必须在你的动画循环里调用.update()。
-controls.enableDamping = true
-
-// 添加坐标辅助器
-const axesHelper = new THREE.AxesHelper(5)
+// 辅助坐标
+let axesHelper = new THREE.AxesHelper(25)
 scene.add(axesHelper)
 
-// 设置时钟
-const clock = new THREE.Clock()
-
-function animate() {
-  controls.update()
-
+// 渲染函数
+function render() {
   renderer.render(scene, camera)
-
-  requestAnimationFrame(animate)
+  requestAnimationFrame(render)
 }
-animate()
 
-// 监听画面的变化，更新渲染画面
-window.addEventListener('resize', () => {
-  console.log('resize')
-
-  // 更新摄像头
-  camera.aspect = window.innerWidth / window.innerHeight
-
-  // 更新摄像机的投影矩阵
-  camera.updateProjectionMatrix()
-
-  // 更新渲染器
-  renderer.setSize(window.innerWidth, window.innerHeight)
-  src / main / main05.js
-  // 设置渲染器的像素比
-  renderer.setPixelRatio(window.devicePixelRatio)
-})
+render()
