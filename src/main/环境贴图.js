@@ -1,23 +1,8 @@
 import * as THREE from 'three'
+import { SphereBufferGeometry } from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader'
-//GOAL： 场景环境贴图，经纬线映射贴图与HDR
-// DataTextureLoader加载HDR
 
-/**
- * @重要问题 这里的hdr文件的引入是通过相对路径直接引入的dist中的文件，但是因为dist文件夹不会被上传到git上，所以异地拉取运行会有找不到文件的情况出现
- * @解决方案 在运行项目后，会出现dist文件夹，将assets文件夹下的textures文件夹整体复制一份到dist文件夹下即可
- */
-
-// 加载HDR
-const rgbLoader = new RGBELoader()
-
-rgbLoader.loadAsync('./textures/hdr/002.hdr').then((texture) => {
-  // 修改纹理图的映射方式
-  texture.mapping = THREE.EquirectangularReflectionMapping
-  scene.background = texture
-  scene.environment = texture
-})
+//GOAL： 环境贴图
 
 // 场景
 let scene = new THREE.Scene()
@@ -60,7 +45,7 @@ const sphereGeometry = new THREE.SphereGeometry(1, 20, 20)
 const material = new THREE.MeshStandardMaterial({
   metalness: 0.7, // 金属度
   roughness: 0.1, // 粗糙度
-  // envMap: envMapTecture,
+  envMap: envMapTecture,
 })
 const sphere = new THREE.Mesh(sphereGeometry, material)
 scene.add(sphere)
