@@ -1,23 +1,10 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader'
-//GOAL： 场景环境贴图，经纬线映射贴图与HDR
-// DataTextureLoader加载HDR
+//GOAL：点光源
 
-/**
- * @重要问题 这里的hdr文件的引入是通过相对路径直接引入的dist中的文件，但是因为dist文件夹不会被上传到git上，所以异地拉取运行会有找不到文件的情况出现
- * @解决方案 在运行项目后，会出现dist文件夹，将assets文件夹下的textures文件夹整体复制一份到dist文件夹下即可
- */
-
-// 加载HDR
-const rgbLoader = new RGBELoader()
-
-rgbLoader.loadAsync('./textures/hdr/002.hdr').then((texture) => {
-  // 修改纹理图的映射方式
-  texture.mapping = THREE.EquirectangularReflectionMapping
-  scene.background = texture
-  scene.environment = texture
-})
+import * as dat from 'dat.gui'
+import { MeshBasicMaterial } from 'three'
 
 // 场景
 let scene = new THREE.Scene()
@@ -26,48 +13,79 @@ let scene = new THREE.Scene()
 // 通过将参数抽离的方式，避免被格式化
 let arr = [45, window.innerWidth / window.innerHeight, 1, 100000]
 let camera = new THREE.PerspectiveCamera(...arr)
-camera.position.set(-1, 1, 7)
+camera.position.set(1, 1, 20)
 camera.lookAt(scene.position)
+
+// 添加球体
+const sphereGeometry = new THREE.SphereGeometry(1, 20, 20)
+const material = new THREE.MeshStandardMaterial()
+const sphere = new THREE.Mesh(sphereGeometry, material)
+// 3.设置物体投射阴影
+sphere.castShadow = true
+scene.add(sphere)
+
+// 添加平面
+const planeGeometry = new THREE.PlaneGeometry(30, 30)
+const plane = new THREE.Mesh(planeGeometry, material)
+plane.position.set(0, -1, 0)
+plane.rotation.x = -Math.PI / 2
+// 4.接受阴影
+plane.receiveShadow = true
+scene.add(plane)
+
+// 创建一个小球
+const smallBall = new THREE.Mesh(
+  new THREE.SphereGeometry(0.1, 20, 20),
+  new MeshBasicMaterial({ color: 0xff0000 })
+)
+smallBall.position.set(2, 2, 2)
 
 // 环境光
 const light = new THREE.AmbientLight(0x404040)
 scene.add(light)
 // 平行光
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5)
-directionalLight.position.set(10, 10, 10)
-scene.add(directionalLight)
+const pointLight = new THREE.PointLight(0xff0000, 1)
+pointLight.position.set(2, 2, 2)
+// 2.设置光照投射阴影
+pointLight.castShadow = true
 
-const pxImg = require('../assets/textures/environmentMaps/2/px.jpg')
-const nxImg = require('../assets/textures/environmentMaps/2/nx.jpg')
-const pyImg = require('../assets/textures/environmentMaps/2/py.jpg')
-const nyImg = require('../assets/textures/environmentMaps/2/ny.jpg')
-const pzImg = require('../assets/textures/environmentMaps/2/pz.jpg')
-const nzImg = require('../assets/textures/environmentMaps/2/nz.jpg')
+// 设置阴影贴图模糊度
+pointLight.shadow.radius = 20
+// 设置阴影帖度的分辨率，宽高
+pointLight.shadow.mapSize.set(512, 512)
 
-// 设置cube纹理加载器
-const cubeTxtrureLoader = new THREE.CubeTextureLoader()
-const envMapTecture = cubeTxtrureLoader.load([
-  pxImg,
-  nxImg,
-  pyImg,
-  nyImg,
-  pzImg,
-  nzImg,
-])
+pointLight.decay = 0
 
-// 添加球体
-const sphereGeometry = new THREE.SphereGeometry(1, 20, 20)
-const material = new THREE.MeshStandardMaterial({
-  metalness: 0.7, // 金属度
-  roughness: 0.1, // 粗糙度
-  // envMap: envMapTecture,
-})
-const sphere = new THREE.Mesh(sphereGeometry, material)
-scene.add(sphere)
+// 把点光源绑定到小球上
+smallBall.add(pointLight)
+
+// 再把小球添加到场景里
+scene.add(smallBall)
+
+// 添加gui
+const gui = new dat.GUI()
+gui
+  .add(sphere.position, 'x')
+  .min(-10)
+  .max(10)
+  .step(0.01)
+  .name('X轴')
+  .onChange((v) => {
+    console.log('值被修改', v)
+  })
+  .onFinishChange((v) => {
+    console.log('onFinishChange完全停下来', v)
+  })
+gui.add(pointLight, 'distance').min(0).max(5).step(0.01)
+gui.add(pointLight, 'decay').min(0).max(1).step(0.01)
 
 // 渲染器
 let renderer = new THREE.WebGLRenderer()
 renderer.setSize(window.innerWidth, window.innerHeight)
+// 1.设置渲染器开启阴影计算
+renderer.shadowMap.enabled = true
+
+renderer.physicallyCorrectLights = true
 document.body.appendChild(renderer.domElement)
 
 // 控制器
@@ -77,8 +95,19 @@ new OrbitControls(camera, renderer.domElement)
 let axesHelper = new THREE.AxesHelper(25)
 scene.add(axesHelper)
 
+//设置时钟
+const clock = new THREE.Clock()
+
+// 创建轨道控制器
+const controls = new OrbitControls(camera, renderer.domElement)
+
 // 渲染函数
 function render() {
+  let time = clock.getElapsedTime()
+  smallBall.position.x = Math.sin(time) * 3 // 从-1到1 * 3
+  smallBall.position.y = 2 + Math.sin(time * 10)
+  smallBall.position.z = Math.cos(time) * 3
+  controls.update()
   renderer.render(scene, camera)
   requestAnimationFrame(render)
 }
