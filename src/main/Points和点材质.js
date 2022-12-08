@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader'
-//GOAL：使用Points设置随机点
+//GOAL：点（Points）一个用于显示点的类。
 
 import { MeshBasicMaterial } from 'three'
 
@@ -15,26 +15,14 @@ let camera = new THREE.PerspectiveCamera(...arr)
 camera.position.set(1, 1, 20)
 camera.lookAt(scene.position)
 
-const particlesGeometry = new THREE.BufferGeometry()
-const count = 5000
-
-// 设置缓冲区数组
-const position = new Float32Array(count * 3)
-
-// 设置粒子顶点颜色
-const colors = new Float32Array(count * 3)
-
-// 设置顶点
-for (let i = 0; i < count * 3; i++) {
-  position[i] = Math.random() * 10 - 5
-  colors[i] = Math.random()
-}
-particlesGeometry.setAttribute(
-  'position',
-  new THREE.BufferAttribute(position, 3)
-)
-
-particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+// 添加球体
+const sphereGeometry = new THREE.SphereGeometry(1, 30, 30)
+const material = new THREE.MeshBasicMaterial({
+  color: 0xff0000,
+  wireframe: true,
+})
+// const sphere = new THREE.Mesh(sphereGeometry, material)
+// scene.add(sphere)
 
 // 设置点材质
 const pointMaterial = new THREE.PointsMaterial()
@@ -56,10 +44,7 @@ pointMaterial.alphaMap = texture
 pointMaterial.depthWrite = false
 pointMaterial.blending = THREE.AdditiveBlending // 两个点叠加显示更亮
 
-// 设置启动顶点颜色
-pointMaterial.vertexColors = true
-
-const points = new THREE.Points(particlesGeometry, pointMaterial)
+const points = new THREE.Points(sphereGeometry, pointMaterial)
 scene.add(points)
 
 // 渲染器
